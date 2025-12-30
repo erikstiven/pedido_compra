@@ -9070,23 +9070,25 @@ function guarda_pedido($opcion_tmp, $aForm = '', $idReq = 0)
     $oConA->Conectar();
 
     $oReturn = new xajaxResponse();
-    //      VARIABLES
-    $idempresa = $aForm['empresa'];
-    $usuario_ifx = $_SESSION['U_USER_INFORMIX'];
-    $usuario_web = $_SESSION['U_ID'];
-    $sucursal = $aForm['sucursal'];
-    $aDataGrid = $_SESSION['aDataGird'];
-    $oReturn->script("console.log('Payload recibido para actualizar el pedido', " . json_encode($aForm) . ");");
+    try {
+        //      VARIABLES
+        $aForm = is_array($aForm) ? $aForm : array();
+        $idempresa = $aForm['empresa'] ?? '';
+        $usuario_ifx = $_SESSION['U_USER_INFORMIX'] ?? '';
+        $usuario_web = $_SESSION['U_ID'] ?? '';
+        $sucursal = $aForm['sucursal'] ?? '';
+        $aDataGrid = isset($_SESSION['aDataGird']) && is_array($_SESSION['aDataGird']) ? $_SESSION['aDataGird'] : array();
+        $oReturn->script("console.log('Payload recibido para guardar el pedido', " . json_encode($aForm) . ");");
+        if (empty($aDataGrid)) {
+            $oReturn->script("console.warn('No hay productos en sesión (aDataGird).');");
+        }
 
-    $oReturn->script("console.log('Payload recibido para guardar el pedido', " . json_encode($aForm) . ");");
-
-
-    $contdata = count($aDataGrid);
-    $total_compra = $aForm['total_fac'];
-    $tipo_logistica = !empty($aForm['tipo_logistica']) ? $aForm['tipo_logistica'] : 'L';
-    $tipo_solicitud = $aForm['tipo'];
-    $omitirAprobaciones = !empty($aForm['omitirAprobacionesCampo']) && $aForm['omitirAprobacionesCampo'] == '1';
-    $valorOmitirAprobaciones = $omitirAprobaciones ? 'S' : 'N';
+        $contdata = count($aDataGrid);
+        $total_compra = $aForm['total_fac'] ?? 0;
+        $tipo_logistica = !empty($aForm['tipo_logistica']) ? $aForm['tipo_logistica'] : 'L';
+        $tipo_solicitud = $aForm['tipo'] ?? '';
+        $omitirAprobaciones = !empty($aForm['omitirAprobacionesCampo']) && $aForm['omitirAprobacionesCampo'] == '1';
+        $valorOmitirAprobaciones = $omitirAprobaciones ? 'S' : 'N';
 
     //CORREO DE SOLICITANTE
 
@@ -9427,6 +9429,16 @@ function guarda_pedido($opcion_tmp, $aForm = '', $idReq = 0)
         $oReturn->assign("ctrl", "value", 1);
         $oReturn->script("console.warn('No se pudo guardar el pedido porque no hay productos en el detalle');");
         $oReturn->script("jsRemoveWindowLoad();");
+    }
+
+    } catch (Throwable $e) {
+        $oReturn->script("jsRemoveWindowLoad();");
+        $oReturn->script("console.error('Error inesperado al guardar el pedido', " . json_encode(array(
+            'mensaje' => $e->getMessage(),
+            'linea' => $e->getLine(),
+            'archivo' => $e->getFile()
+        )) . ");");
+        $oReturn->script("alertSwal('Ocurrió un error inesperado al guardar el pedido. Revise la consola para más detalles.', 'error');");
     }
 
     return $oReturn;
@@ -10616,7 +10628,18 @@ function total_grid($aForm = '')
     }
 
     $oReturn = new xajaxResponse();
-    $oReturn->assign("divTotal", "");
+    try {
+        $oReturn->assign("divTotal", "");
+        $oReturn->script("console.log('Total grid solicitado', " . json_encode($aForm) . ");");
+    } catch (Throwable $e) {
+        $oReturn->script("jsRemoveWindowLoad();");
+        $oReturn->script("console.error('Error en total_grid', " . json_encode(array(
+            'mensaje' => $e->getMessage(),
+            'linea' => $e->getLine(),
+            'archivo' => $e->getFile()
+        )) . ");");
+        $oReturn->script("alertSwal('No se pudo calcular los totales. Revise la consola para más detalles.', 'error');");
+    }
 
     return $oReturn;
 }

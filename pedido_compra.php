@@ -141,6 +141,62 @@
             }
         });
 
+        function configurarErroresXajax(intentos) {
+            var reintentos = typeof intentos === 'number' ? intentos : 0;
+
+            if (!window.xajax || !xajax.callback || !xajax.callback.global) {
+                if (reintentos < 10) {
+                    setTimeout(function() {
+                        configurarErroresXajax(reintentos + 1);
+                    }, 300);
+                }
+                return;
+            }
+
+            xajax.callback.global.onFailure = function(args) {
+                try {
+                    jsRemoveWindowLoad();
+                } catch (error) {
+                    console.warn('No se pudo cerrar el loader', error);
+                }
+
+                var status = args && args.request ? args.request.status : 'SIN_RESPUESTA';
+                var respuesta = args && args.request ? (args.request.responseText || '') : '';
+
+                console.error('Error en la solicitud XAJAX', {
+                    status: status,
+                    responseText: respuesta,
+                    request: args && args.request ? args.request : null
+                });
+
+                if (typeof alertSwal === 'function') {
+                    alertSwal('Error del servidor (' + status + '). Revise la consola para más detalle.', 'error');
+                } else {
+                    alert('Error del servidor (' + status + '). Revise la consola para más detalle.');
+                }
+
+                return true;
+            };
+
+            xajax.callback.global.onResponseDelay = function(args) {
+                console.warn('La respuesta del servidor está tardando.', args);
+                return true;
+            };
+        }
+
+        window.addEventListener('error', function(event) {
+            try {
+                jsRemoveWindowLoad();
+            } catch (error) {
+                console.warn('No se pudo cerrar el loader tras error JS', error);
+            }
+            console.error('Error de JavaScript detectado', event);
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            configurarErroresXajax(0);
+        });
+
         function modal_ordenes_compra(id, empresa, sucursal) {
             $("#ModalOrdenes").modal("show");
             xajax_form_ordenes_proveedores(id, empresa, sucursal);
@@ -2969,7 +3025,14 @@
                 // IMPORTANTE: aquí YA NO validamos prod/cod.
                 // El backend tomará bodega y producto desde comercial.parametro_inv.
                 jsShowWindowLoad();
-                xajax_agrega_modifica_grid(0, 0, '', xajax.getFormValues("form1"));
+                var payloadAux = xajax.getFormValues("form1");
+                console.log('Enviando producto no registrado', {
+                    producto: prod,
+                    codigo: cod,
+                    cantidad: cant,
+                    payload: payloadAux
+                });
+                xajax_agrega_modifica_grid(0, 0, '', payloadAux);
                 return;
             }
 
@@ -2985,7 +3048,14 @@
                 foco('cantidad');
             } else {
                 jsShowWindowLoad();
-                xajax_agrega_modifica_grid(0, 0, '', xajax.getFormValues("form1"));
+                var payload = xajax.getFormValues("form1");
+                console.log('Enviando producto registrado', {
+                    producto: prod,
+                    codigo: cod,
+                    cantidad: cant,
+                    payload: payload
+                });
+                xajax_agrega_modifica_grid(0, 0, '', payload);
             }
         }
 
