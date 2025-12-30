@@ -10629,7 +10629,7 @@ function total_grid($aForm = '')
 
     $oReturn = new xajaxResponse();
     try {
-        $oReturn->assign("divTotal", "");
+        $oReturn->assign("divTotal", "innerHTML", "");
         $oReturn->script("console.log('Total grid solicitado', " . json_encode($aForm) . ");");
     } catch (Throwable $e) {
         $oReturn->script("jsRemoveWindowLoad();");
